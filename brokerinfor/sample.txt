@@ -1,0 +1,803 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+	version="1.0" xmlns:xalan="http://xml.apache.org/xslt">
+	<xsl:template match="/">
+		<head>
+			<title>
+				(
+				<xsl:value-of select="/StatusData/Broker/@ShortDescription" />
+				)
+				<xsl:value-of select="/StatusData/Broker/@Name" />
+			</title>
+			<style>
+				table {
+				  box-sizing: border-box;
+				  overflow: hidden;
+				  margin: 2em auto;
+				  border-collapse: collapse;
+				  min-width: 10em; width: 100%; max-width: 100em;
+				  border-radius: .5em;
+				  box-shadow: 0 0 .5em #000;
+  				  font-family : Verdana,Helvetica,Arial,sans-serif;
+				}
+
+				th, td {
+			    	padding: 4px;			    	
+			    	border-bottom: 1px solid #ddd;
+			    	font-size : 80%;
+  					font-family : Verdana,sans-serif;
+				}
+    		</style>
+		</head>
+		<html>
+			<body>
+			<style>
+					.hiddenRow {
+				 display: none;
+				 visiblity: hidden;
+				}
+				
+				.visibleRow {
+				 display:
+				 visibility: visible;
+				}
+				</style>
+				<script language="JavaScript">
+				
+				function showHide(HID) {
+					if (document.getElementById(HID).className!='visibleRow') {
+						//document.getElementById(IMG).src='/images/collapse.gif';
+						document.getElementById(HID).className='visibleRow';
+					} else {
+						//document.getElementById(IMG).src='/images/expand.gif';
+						document.getElementById(HID).className='hiddenRow';
+					}
+				}
+				
+				//enter refresh time in "minutes:seconds" Minutes should range from 0 to inifinity. Seconds should range from 0 to 59
+					var limit="5:0"
+					
+					var doctitle = document.title
+					var parselimit=limit.split(":")
+					parselimit=parselimit[0]*60+parselimit[1]*1
+					
+					function beginrefresh(){
+						if (parselimit==1)
+							window.location.reload()
+						else{ 
+							parselimit-=1
+							curmin=Math.floor(parselimit/60)
+							cursec=parselimit%60
+							if (curmin!=0)
+								curtime=curmin+" minutes and "+cursec+" seconds left until page refresh!"
+							else
+								curtime=cursec+" seconds left until page refresh!"
+							document.title = doctitle + ' (' + curtime +')'
+							setTimeout("beginrefresh()",1000)
+						}
+					}
+					
+					if (window.addEventListener)
+						window.addEventListener("load", beginrefresh, false)
+					else if (window.attachEvent)
+						window.attachEvent("load", beginrefresh)
+				</script>
+				<!-- Display a page heading -->
+				<h1 align="CENTER">
+					Status information for
+					<xsl:value-of select="/StatusData/Broker/@Name" />
+					(
+					<xsl:value-of select="/StatusData/Broker/@ShortDescription" />
+					)
+				</h1>
+
+				<!--
+					Test to see if there was an error. If so, display error message. If
+					not, display normally
+				-->
+				<xsl:choose>
+					<xsl:when test="/StatusData/Error">
+						<p style="color: red">
+							<b>Error: </b>
+							<xsl:value-of select="/StatusData/Error" />
+						</p>
+						Detail:
+						<br />
+						<xsl:for-each select="/StatusData/ErrorDetail/line">
+							<xsl:value-of select="." />
+							<br />
+						</xsl:for-each>
+					</xsl:when>
+					<xsl:otherwise>
+						<!-- Show the time at which the status was last read -->
+						<b>Status Read At: </b>
+						<xsl:value-of select="/StatusData/GenerationTime" />
+
+						<!-- Show broker level info -->
+						<table>
+							<tr>
+								<td>
+									<b>Broker Name: </b>
+									<xsl:value-of select="/StatusData/Broker/@Name" />
+									<br />
+									<b>Short Description: </b>
+									<xsl:value-of select="/StatusData/Broker/@ShortDescription" />
+									<br />
+									<b>Long Description: </b>
+									<xsl:value-of select="/StatusData/Broker/LongDescription" />
+									<br />
+									<b>QManager: </b>
+									<xsl:value-of select="/StatusData/Broker/@QManager" />
+								</td>
+								<td>
+									<b>Workpath: </b>
+									<xsl:value-of select="/StatusData/FileSystem/@WorkPath" />
+									<br />
+									<b>Workpath MB Free: </b>
+									<xsl:value-of select="/StatusData/FileSystem/@WorkPathFreeMB" />
+									<br />
+									<b>Workpath MB Total: </b>
+									<xsl:value-of select="/StatusData/FileSystem/@WorkPathTotalMB" />
+									<br />
+									<b>Workpath Percent Used: </b>
+									<xsl:value-of select="/StatusData/FileSystem/@WorkPathPercentUsed" />
+									<br />
+								</td>
+								<td>
+									<b>Last Start: </b>
+									<xsl:value-of select="/StatusData/FileSystem/LockFile/@Date" />
+									<br />
+									<b>HTTP/HTTPS Ports: </b>
+									<xsl:value-of select="/StatusData/Broker/@HTTPPort" />
+									:
+									<xsl:value-of select="/StatusData/Broker/@HTTPSPort" />
+									<br />
+									<b>Default Soap HTTP/HTTPS Port Ranges: </b>
+									<xsl:value-of select="/StatusData/Broker/@SoapHTTPPortRange" />
+									:
+									<xsl:value-of select="/StatusData/Broker/@SoapHTTPSPortRange" />
+									<br />
+									<b>Version: </b>
+									<xsl:value-of select="/StatusData/Broker/@Version" />
+									(
+									<xsl:value-of select="/StatusData/Broker/@LongVersion" />
+									)
+									<br />
+								</td>
+							</tr>
+						</table>
+						<hr />
+						<!-- Use a table to display activity log on broker -->
+						<TABLE>
+							<tr onClick="showHide('rowHiddenActivityLog');">
+							    <td style="width:0px;font-weight:bold;cursor:pointer;color:blue;">Expand/Collapse Latest Changes ...</td>
+							</tr>
+							<tr id="rowHiddenActivityLog" class="hiddenRow"><td>
+							<table cellspacing="0">
+								<tr bgcolor="#51e6c8">
+									<th>Timestamp</th>
+									<th>Result</th>
+								</tr>
+								<xsl:for-each select="/StatusData/LogEntries/LogEntry">								
+								<tr align="CENTER">
+									<td width="15%" align="Left"><xsl:value-of select="./@LogTime"/></td>
+									<td width="85%" align="Left"><xsl:value-of select="./@LogDetails"/></td>
+								</tr>
+								</xsl:for-each>
+								<tr align="CENTER" bgcolor="#51e6c8">
+									<td width="15%"><b>Timestamp</b></td>
+									<td width="85%"><b>Recently Modified XML Files.</b></td>
+								</tr>
+								<xsl:for-each select="/StatusData/FileSystem/XMLExternal/LatestModFile">								
+								<tr align="CENTER">
+									<td width="15%" align="Left"><xsl:value-of select="./@ModifiedDate"/></td>
+									<td width="85%" align="Left"><xsl:value-of select="./@Name"/> is modified.</td>
+								</tr>
+								</xsl:for-each>
+								<tr align="CENTER" bgcolor="#51e6c8">
+									<td width="15%"><b>Timestamp</b></td>
+									<td width="85%"><b>Recently Modified XSL Files.</b></td>
+								</tr>
+								<xsl:for-each select="/StatusData/FileSystem/XSLExternal/LatestModFile">								
+								<tr align="CENTER">
+									<td width="15%" align="Left"><xsl:value-of select="./@ModifiedDate"/></td>
+									<td width="85%" align="Left"><xsl:value-of select="./@Name"/> is modified.</td>
+								</tr>
+								</xsl:for-each>
+								</table></td>
+							</tr>
+						</TABLE>
+						<!--
+							Use a table to display any files in the error directory on the
+							system if they exist
+						-->
+						<xsl:choose>
+							<xsl:when test="/StatusData/FileSystem/ErrorFiles/ErrorFile">
+								<font color="Red">
+									<b>Error files exist. These should be investigated and
+										removed/archived</b>
+								</font>
+							  <TABLE>
+								<tr onClick="showHide('rowHiddenErrorFiles');">
+								    <td style="width:0px;font-weight:bold;cursor:pointer;color:blue;">Expand/Collapse Error Files ...</td>
+								</tr>
+								<tr id="rowHiddenErrorFiles" class="hiddenRow"><td>
+								<table cellspacing="10">
+									<tr align="left" bgcolor="#51e6c8">
+										<td>
+											<b>File Name</b>
+										</td>
+										<td>
+											<b>Date</b>
+										</td>
+										<td>
+											<b>Size</b>
+										</td>
+									</tr>
+									<xsl:for-each select="/StatusData/FileSystem/ErrorFiles/ErrorFile">
+										<tr align="left">
+											<xsl:choose>
+												<xsl:when
+													test="@Type='Compressed' and /StatusData/DisplaySensitiveData='True'">
+													<td>
+														<a>
+															<xsl:attribute name="href">BrokerInfo?Download=<xsl:value-of
+																select="./@Name" />&amp;Key=<xsl:value-of select="./@FileIDKey"/></xsl:attribute><xsl:value-of select="./@Name"/></a></td>
+												</xsl:when>
+												<xsl:otherwise>
+													<td><xsl:value-of select="./@Name"/></td>
+												</xsl:otherwise>
+											</xsl:choose>
+											<td><xsl:value-of select="./@Date"/></td>
+											<td><xsl:value-of select="./@Size"/></td>
+										</tr>
+									</xsl:for-each>
+								</table></td>
+								</tr>
+								</TABLE>
+								<hr/>	
+							</xsl:when>
+							<xsl:otherwise>
+								<!--There are no error files detected at this time	 -->
+							</xsl:otherwise>
+						</xsl:choose>
+    					<!-- Use a table to display the status of each execution group and message flow -->
+    					<p>
+    					<b>For Component Type :</b><br/>
+    					EG : Execution Group<br/>
+    					MF : Message Flow<br/>
+    					SF : Sub Flow<br/>
+    					SH Lib : Shared Library<br/>
+    					ST Lib : Static Library<br/>
+    					App : Application<br/>
+    					App's MF : Message Flow inside Application<br/>
+    					</p>
+    					<table cellspacing="0">
+							<tr bgcolor="#51e6c8">
+								<th>Execution Group/<i>Message Flow/</i><i>Applications/Libraries</i></th>
+								<th>Component Type</th>
+								<th>Status</th>
+								<th>Monitoring<br/>Status</th>	
+								<th>Monitoring<br/>Profile</th>	
+								<th>Additional<br/>Instances</th>							
+								<th>BarFile<br/>Name</th>							
+								<th>BAR<br/>Deploy Time</th>
+								<th>BAR<br/>ModifyTime</th>
+								<th>HTTPPort<br/>(Set/InUse)</th>
+								<th>HTTPSPort<br/>(Set/InUse)</th>
+								<th>DebugPort<br/>Active</th>
+								<th title="This indicates the status of Trace nodes in flows">Trace<br/>Nodes</th>
+								<th>Service<br/>TraceLevel</th>
+								<th>User<br/>TraceLevel</th>	
+								<th>Trace<br/>LogSize</th>							
+								<th>Last<br/>CompletionCode</th>
+								</tr>
+							<xsl:for-each select="/StatusData/ExecutionGroups/ExecutionGroup">								
+								<tr align="CENTER" bgcolor="#D5F8FD">
+									<td align="Left"><xsl:attribute name="title"><xsl:value-of select="./@UUID"/></xsl:attribute><b><xsl:value-of select="./@Name"/></b></td>
+									<td><b>EG</b></td>
+									<td><font><xsl:attribute name="color"><xsl:value-of select="./Status/@color"/></xsl:attribute><b><xsl:value-of select="./Status"/></b></font></td>
+									<xsl:choose>
+										<xsl:when test="./@MonitoringStatus!='null'">
+											<td><font><xsl:attribute name="color"><xsl:value-of select="./MonitoringStatus/@color"/></xsl:attribute><b><xsl:value-of select="./@MonitoringStatus"/></b></font></td>
+										</xsl:when>
+										<xsl:otherwise>
+											<td><b>-</b></td>
+										</xsl:otherwise>
+									</xsl:choose>
+									<xsl:choose>
+										<xsl:when test="./@MonitoringProfile!='null'">
+											<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute><b><xsl:value-of select="./@MonitoringProfile"/></b></font></td>
+										</xsl:when>
+										<xsl:otherwise>
+											<td><b>-</b></td>
+										</xsl:otherwise>
+									</xsl:choose>
+									<td>-</td>
+									<td>-</td>
+									<td>-</td>
+									<td>-</td>
+									<td><b><xsl:value-of select="./@HTTPExplicitPort"/>/<xsl:value-of select="./@HTTPPort"/></b></td>
+									<td><b><xsl:value-of select="./@HTTPSExplicitPort"/>/<xsl:value-of select="./@HTTPSPort"/></b></td>
+									<td><b><xsl:value-of select="./@DebugPortActive"/></b></td>
+									<xsl:choose>
+										<xsl:when test="./@TraceNodeLevel!='null'">
+											<td><b><xsl:value-of select="./@TraceNodeLevel"/></b></td>
+										</xsl:when>
+										<xsl:otherwise>
+											<td><b>-</b></td>
+										</xsl:otherwise>
+									</xsl:choose>
+									
+									<td><b><xsl:value-of select="./@ServiceTraceLevel"/></b></td>
+									<td><b><xsl:value-of select="./@UserTraceLevel"/></b></td>
+									<td><b><xsl:value-of select="./@TraceLogSize"/></b></td>
+									<td><b><xsl:value-of select="./@LastCompletionCode"/></b></td>
+								</tr>
+								<!-- Add information for each message flow in the execution group -->
+								<xsl:for-each select="./MessageFlows/MessageFlow">
+									<tr align="CENTER" bgcolor="#FCFFD2">
+										<td align="right"><xsl:attribute name="title"><xsl:value-of select="./@Name"/></xsl:attribute><i><xsl:value-of select="./@ShortName"/></i></td>
+										<td>MF</td>
+										<td><font><xsl:attribute name="color"><xsl:value-of select="./Status/@color"/></xsl:attribute><xsl:value-of select="./Status"/></font></td>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringStatus!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringStatuscolor"/></xsl:attribute><xsl:value-of select="./@MonitoringStatus"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringProfile!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute><xsl:value-of select="./@MonitoringProfile"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@AdditionalInstances"/></td>
+								
+											<xsl:choose>
+													<xsl:when
+														test="/StatusData/DownloadBarFile='True'">
+														<td><a>
+														<xsl:attribute name="href">BrokerInfo?Download=<xsl:value-of select="./@BARFileName" /></xsl:attribute><xsl:value-of select="./@BARFileShortName"/></a>
+														</td>
+													</xsl:when>
+													<xsl:otherwise>
+														<td><xsl:value-of select="./@BARFileShortName"/></td>
+													</xsl:otherwise>
+											</xsl:choose>
+										
+										<td nowrap="nowrap"><xsl:value-of select="./@DeployTime"/></td>
+										<td nowrap="nowrap"><xsl:value-of select="./@ModifyTime"/></td>
+										<td>-</td>
+										<td>-</td>
+										<td>-</td>										
+										<xsl:choose>	
+											<xsl:when test="./@TraceNodeLevel!='null'">
+												<td><xsl:value-of select="./@TraceNodeLevel"/></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@ServiceTraceLevel"/></td>
+										<td><xsl:value-of select="./@UserTraceLevel"/></td>
+										<td>-</td>
+										</tr>
+								</xsl:for-each>
+								<!-- Add information for each sub flow in the execution group -->
+								<xsl:for-each select="./SubFlows/SubFlow">
+									<tr align="CENTER" bgcolor="#FCFFD2">
+										<td align="right"><xsl:attribute name="title"><xsl:value-of select="./@Name"/></xsl:attribute><i><xsl:value-of select="./@ShortName"/></i></td>
+										<td>SF</td>
+										<td>-</td>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringStatus!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringStatuscolor"/></xsl:attribute><xsl:value-of select="./@MonitoringStatus"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringProfile!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute><xsl:value-of select="./@MonitoringProfile"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@AdditionalInstances"/></td>
+										
+											<xsl:choose>
+													<xsl:when
+														test="/StatusData/DownloadBarFile='True'">
+														<td><a>
+														<xsl:attribute name="href">BrokerInfo?Download=<xsl:value-of select="./@BARFileName" /></xsl:attribute><xsl:value-of select="./@BARFileShortName"/></a>
+														</td>
+													</xsl:when>
+													<xsl:otherwise>
+														<td><xsl:value-of select="./@BARFileShortName"/></td>
+													</xsl:otherwise>
+											</xsl:choose>
+										
+										<td nowrap="nowrap"><xsl:value-of select="./@DeployTime"/></td>
+										<td nowrap="nowrap"><xsl:value-of select="./@ModifyTime"/></td>
+										<td>-</td>
+										<td>-</td>
+										<td>-</td>										
+										<xsl:choose>	
+											<xsl:when test="./@TraceNodeLevel!='null'">
+												<td><xsl:value-of select="./@TraceNodeLevel"/></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@ServiceTraceLevel"/></td>
+										<td><xsl:value-of select="./@UserTraceLevel"/></td>
+										<td>-</td>
+										</tr>
+								</xsl:for-each>
+								<!-- Add information for each Library in the execution group -->
+								<xsl:for-each select="./Libraries/StaticLibrary">
+									<tr align="CENTER">
+										<td align="right"><xsl:attribute name="title"><xsl:value-of select="./@Name"/></xsl:attribute><i><xsl:value-of select="./@ShortName"/></i></td>
+										<td>ST Lib</td>
+										<td>-</td>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringStatus!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringStatuscolor"/></xsl:attribute><xsl:value-of select="./@MonitoringStatus"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringStatuscolor"/></xsl:attribute>-</font></td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringProfile!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute><xsl:value-of select="./@MonitoringProfile"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute>-</font></td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@AdditionalInstances"/></td>
+										
+											<xsl:choose>
+													<xsl:when
+														test="/StatusData/DownloadBarFile='True'">
+														<td><a>
+														<xsl:attribute name="href">BrokerInfo?Download=<xsl:value-of select="./@BARFileName" /></xsl:attribute><xsl:value-of select="./@BARFileShortName"/></a>
+														</td>
+													</xsl:when>
+													<xsl:otherwise>
+														<td><xsl:value-of select="./@BARFileShortName"/></td>
+													</xsl:otherwise>
+											</xsl:choose>
+										
+										<td nowrap="nowrap"><xsl:value-of select="./@DeployTime"/></td>
+										<td nowrap="nowrap"><xsl:value-of select="./@ModifyTime"/></td>
+										<td>-</td>
+										<td>-</td>
+										<td>-</td>
+										<xsl:choose>	
+											<xsl:when test="./@TraceNodeLevel!='null'">
+												<td><xsl:value-of select="./@TraceNodeLevel"/></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@ServiceTraceLevel"/></td>
+										<td><xsl:value-of select="./@UserTraceLevel"/></td>
+										<td>-</td>
+										</tr>
+								</xsl:for-each>
+								<xsl:for-each select="./Libraries/SharedLibrary">
+									<tr align="CENTER">
+										<td align="right"><xsl:attribute name="title"><xsl:value-of select="./@Name"/></xsl:attribute><i><xsl:value-of select="./@ShortName"/></i></td>
+										<td>SH Lib</td>
+										<td>-</td>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringStatus!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringStatuscolor"/></xsl:attribute><xsl:value-of select="./@MonitoringStatus"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringStatuscolor"/></xsl:attribute>-</font></td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringProfile!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute><xsl:value-of select="./@MonitoringProfile"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute>-</font></td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@AdditionalInstances"/></td>
+										
+											<xsl:choose>
+													<xsl:when
+														test="/StatusData/DownloadBarFile='True'">
+														<td><a>
+														<xsl:attribute name="href">BrokerInfo?Download=<xsl:value-of select="./@BARFileName" /></xsl:attribute><xsl:value-of select="./@BARFileShortName"/></a>
+														</td>
+													</xsl:when>
+													<xsl:otherwise>
+														<td><xsl:value-of select="./@BARFileShortName"/></td>
+													</xsl:otherwise>
+											</xsl:choose>
+										
+										<td nowrap="nowrap"><xsl:value-of select="./@DeployTime"/></td>
+										<td nowrap="nowrap"><xsl:value-of select="./@ModifyTime"/></td>
+										<td>-</td>
+										<td>-</td>
+										<td>-</td>
+										<xsl:choose>	
+											<xsl:when test="./@TraceNodeLevel!='null'">
+												<td><xsl:value-of select="./@TraceNodeLevel"/></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@ServiceTraceLevel"/></td>
+										<td><xsl:value-of select="./@UserTraceLevel"/></td>
+										<td>-</td>
+										</tr>
+								</xsl:for-each>
+								<!-- Add information for each Application in the execution group -->
+								<xsl:for-each select="./Applications/Application">
+									<tr align="CENTER" bgcolor="#FBE9CD">
+										<td align="right" ><xsl:attribute name="title"><xsl:value-of select="./@Name"/></xsl:attribute><xsl:value-of select="./@ShortName"/></td>
+										<td>App</td>
+										<td><font><xsl:attribute name="color"><xsl:value-of select="./Status/@color"/></xsl:attribute><xsl:value-of select="./Status"/></font></td>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringStatus!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringStatuscolor"/></xsl:attribute><xsl:value-of select="./@MonitoringStatus"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringProfile!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute><xsl:value-of select="./@MonitoringProfile"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@AdditionalInstances"/></td>
+										
+											<xsl:choose>
+													<xsl:when
+														test="/StatusData/DownloadBarFile='True'">
+														<td><a>
+														<xsl:attribute name="href">BrokerInfo?Download=<xsl:value-of select="./@BARFileName" /></xsl:attribute><xsl:value-of select="./@BARFileShortName"/></a>
+														</td>
+													</xsl:when>
+													<xsl:otherwise>
+														<td><xsl:value-of select="./@BARFileShortName"/></td>
+													</xsl:otherwise>
+											</xsl:choose>
+										
+										<td nowrap="nowrap"><xsl:value-of select="./@DeployTime"/></td>
+										<td nowrap="nowrap"><xsl:value-of select="./@ModifyTime"/></td>
+										<td>-</td>
+										<td>-</td>
+										<td>-</td>
+										<xsl:choose>	
+											<xsl:when test="./@TraceNodeLevel!='null'">
+												<td><xsl:value-of select="./@TraceNodeLevel"/></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@ServiceTraceLevel"/></td>
+										<td><xsl:value-of select="./@UserTraceLevel"/></td>
+										<td>-</td>
+										</tr>
+										<!-- Add information for each Message Flow in the Application -->
+										<xsl:for-each select="./MessageFlows/MessageFlow">
+										<tr align="CENTER" bgcolor="#FCFFD2">
+										<td align="right"><xsl:attribute name="title"><xsl:value-of select="./@Name"/></xsl:attribute><i><xsl:value-of select="./@ShortName"/></i></td>
+										<td>App's MF</td>
+										<td><font><xsl:attribute name="color"><xsl:value-of select="./Status/@color"/></xsl:attribute><xsl:value-of select="./Status"/></font></td>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringStatus!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringStatuscolor"/></xsl:attribute><xsl:value-of select="./@MonitoringStatus"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<xsl:choose>
+											<xsl:when test="./@MonitoringProfile!='null'">
+												<td><font><xsl:attribute name="color"><xsl:value-of select="./@MonitoringProfilecolor"/></xsl:attribute><xsl:value-of select="./@MonitoringProfile"/></font></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@AdditionalInstances"/></td>
+										<td><xsl:attribute name="title"><xsl:value-of select="./@BARFileName"/></xsl:attribute><xsl:value-of select="./@BARFileShortName"/></td>
+										<td nowrap="nowrap"><xsl:value-of select="./@DeployTime"/></td>
+										<td nowrap="nowrap"><xsl:value-of select="./@ModifyTime"/></td>
+										<td>-</td>
+										<td>-</td>
+										<td>-</td>
+										<xsl:choose>	
+											<xsl:when test="./@TraceNodeLevel!='null'">
+												<td><xsl:value-of select="./@TraceNodeLevel"/></td>
+											</xsl:when>
+											<xsl:otherwise>
+												<td>-</td>
+											</xsl:otherwise>
+										</xsl:choose>
+										<td><xsl:value-of select="./@ServiceTraceLevel"/></td>
+										<td><xsl:value-of select="./@UserTraceLevel"/></td>
+										<td>-</td>
+										</tr>
+								</xsl:for-each>
+								</xsl:for-each>
+							</xsl:for-each>
+						</table>
+						
+						<!-- Use a table to display associated Queue Manager Queue on broker -->
+						<TABLE>
+							<tr onClick="showHide('rowHiddenQueueDetails');">
+							    <td style="width:0px;font-weight:bold;cursor:pointer;color:blue;">Expand/Collapse Queues Details ...</td>
+							</tr>
+							<tr id="rowHiddenQueueDetails" class="hiddenRow"><td>
+							<table cellspacing="0">
+								<tr bgcolor="#51e6c8">
+									<th>Queue Name</th>
+								</tr>
+								<xsl:for-each select="/StatusData/Queues/Queue">								
+								<tr align="CENTER">
+									<td align="Left"><xsl:value-of select="./@QueueName"/></td>
+								</tr>
+								</xsl:for-each>								
+								</table></td>
+							</tr>
+						</TABLE>
+						
+						<!-- Some of the following data may be deemed security sensitive so it is only displayed conditionally based on env and https  -->
+						<xsl:choose>
+							<xsl:when test="/StatusData/DisplaySensitiveData='True'">
+								<!-- List all the Configurable Services -->
+								<hr/>
+								<b>Configurable services (Template Services not displayed)</b>
+								<TABLE>
+								<tr onClick="showHide('rowHiddenConfService','image2');">
+								    <td style="width:0px;font-weight:bold;cursor:pointer;color:blue;">Expand/Collapse Configurable Services ...</td>
+								</tr>
+								<tr id="rowHiddenConfService" class="hiddenRow"><td>
+								<table cellspacing="0" border="1" >
+									<tr align="CENTER" bgcolor="#51e6c8">
+										<th>Type</th>
+										<th>Configurable Service Name</th>
+										<th>Properties</th>
+									</tr>
+									<!-- <xsl:for-each select="/StatusData/ConfigurableServices/ConfigurableService[@Type='IMSConnect' or @Type='MonitoringProfiles' or @Type='JDBCProviders']"> -->
+									<xsl:for-each select="/StatusData/ConfigurableServices/ConfigurableService[@Template='false']">
+										<tr>
+											<td><xsl:value-of select="./@Type"/></td>
+											<td><xsl:value-of select="./@Name"/></td>
+											<td>
+											<table width="100%" >
+											<xsl:for-each select="./Property">
+												<tr>
+													<td width="20%"><xsl:value-of select="./@Key"/></td>
+													<td width="80%"><xsl:value-of select="."/>  </td>
+												</tr>												
+											</xsl:for-each>
+											</table>
+											</td>
+										</tr>
+									</xsl:for-each>
+								</table></td></tr></TABLE>
+								<hr/>
+								<b>DB Parms</b>
+								<TABLE>
+								<tr onClick="showHide('rowHiddenDBParams','image2');">
+								    <td style="width:0px;font-weight:bold;cursor:pointer;color:blue;">Expand/Collapse DB Parms details ...</td>
+								</tr>
+								<tr id="rowHiddenDBParams" class="hiddenRow"><td>
+		    					<table cellspacing="10">
+									<tr align="CENTER" bgcolor="#51e6c8">
+										<td><b>Security Identifier</b></td>
+										<td><b>UserId</b></td>
+									</tr>
+									<xsl:for-each select="/StatusData/FileSystem/DBparms/DBparm">
+										<tr>
+											<td><xsl:value-of select="./@Name"/></td>
+											<td><xsl:value-of select="./@UserID"/></td>
+										</tr>
+									</xsl:for-each>
+								</table></td></tr></TABLE>
+								<hr/>
+							</xsl:when>	
+							<xsl:otherwise>
+								<p>Display of additional data or the download of abend files requires a secure connection. Please refer to the system administrator</p>
+							</xsl:otherwise>
+						</xsl:choose>		
+								<b>Shared classes</b>
+		    					<table cellspacing="10">
+									<tr align="CENTER" bgcolor="#51e6c8">
+										<td><b>File Name</b></td>
+										<td><b>Date</b></td>
+										<td><b>Size</b></td>
+									</tr>
+									<xsl:for-each select="/StatusData/FileSystem/SharedClasses/SharedClass">
+										<tr>
+											<td><xsl:value-of select="./@Name"/></td>
+											<td><xsl:value-of select="./@Date"/></td>
+											<td><xsl:value-of select="./@Size"/></td>
+										</tr>
+									</xsl:for-each>
+								</table>
+								<hr/>
+								<b>XML/external</b>
+								<TABLE>
+								<tr onClick="showHide('rowHiddenXML','image2');">
+								    <td style="width:0px;font-weight:bold;cursor:pointer;color:blue;">Expand/Collapse XML File details...</td>
+								</tr>
+								<tr id="rowHiddenXML" class="hiddenRow"><td>
+		    					<table cellspacing="10">
+									<tr align="left" bgcolor="#51e6c8">
+										<td><b>File Name</b></td>
+										<td><b>Date</b></td>
+										<td><b>Size</b></td>
+									</tr>
+									<xsl:for-each select="/StatusData/FileSystem/XMLExternal/file[contains(@Name, '.xml')]">
+										<tr>
+											<xsl:choose>
+													<xsl:when
+														test="/StatusData/DisplaySensitiveData='True'">
+														<td><a>
+														<xsl:attribute name="href">BrokerInfo?Download=<xsl:value-of select="./@Name" /></xsl:attribute><xsl:value-of select="./@Name"/></a>
+														</td>
+													</xsl:when>
+													<xsl:otherwise>
+														<td><xsl:value-of select="./@Name"/></td>
+													</xsl:otherwise>
+											</xsl:choose>
+											<td><xsl:value-of select="./@Date"/></td>
+											<td><xsl:value-of select="./@Size"/></td>
+										</tr>
+									</xsl:for-each>
+								</table></td></tr></TABLE>
+								<hr/>
+								<b>XSL/external</b>
+								<TABLE>
+								<tr onClick="showHide('rowHiddenXSL','image2');">
+								    <td style="width:0px;font-weight:bold;cursor:pointer;color:blue;">Expand/Collapse XSL File details ...</td>
+								</tr>
+								<tr id="rowHiddenXSL" class="hiddenRow"><td>
+		    					<table cellspacing="10">
+									<tr align="left" bgcolor="#51e6c8">
+										<td><b>File Name</b></td>
+										<td><b>Date</b></td>
+										<td><b>Size</b></td>
+									</tr>
+									<xsl:for-each select="/StatusData/FileSystem/XSLExternal/file[contains(@Name, '.xsl')]">
+										<tr>
+											<td><xsl:value-of select="./@Name"/></td>
+											<td><xsl:value-of select="./@Date"/></td>
+											<td><xsl:value-of select="./@Size"/></td>
+										</tr>
+									</xsl:for-each>
+								</table></td></tr></TABLE>
+								<hr/>
+					</xsl:otherwise>
+				</xsl:choose>
+       		</body>
+   		</html>
+	</xsl:template>
+</xsl:stylesheet>

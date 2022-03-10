@@ -1,0 +1,12 @@
+<project name="ESB2_WMB" basedir="." default="build.release">
+
+	<!-- Configure Release Directory Path -->
+	<property name="release.dir" value="${basedir}/.."/>
+
+	<!-- Configure build Directory -->
+	<property file="${release.dir}/properties/build.properties"/>	
+
+	<!-- Import Common Build Properties -->
+	<import file="${basedir}/common_SBG.xml"/>
+
+</project>

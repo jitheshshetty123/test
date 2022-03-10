@@ -1,0 +1,748 @@
+<project name="common_ESB2" basedir="." default="">
+
+<!-- 
+################################################################################
+release.properties file details
+
+release.build.number= will be the number of the release, such as 001
+			
+release.build.services= The name(s) of the services to build (separated by spaces)
+						normally set to ${release.services}
+
+############################################################################### -->
+
+	<!-- ################################################################################
+			ENVIRONMENT CONFIGURATION
+     ################################################################################ -->
+
+	<!-- Define Core Directory Locations -->
+	<property name="release.build.basedir" value="${basedir}/.." />
+
+	<!-- Source Environment -->
+	<property environment="env" />
+	<property name="ant.home" value="${env.ANT_HOME}"/>
+
+	<!-- Define Product Home Paths -->
+	<property file="${release.build.basedir}/ABP_ServiceCommon/properties/toolkit.properties"/>
+	<property name="toolkit.home" value="C:/Program Files/IBM/IIB/10.0.0.8/tools/" />
+	<property name="mqsioverridelocation" value="C:/Program Files/IBM/IIB/10.0.0.8/server/bin" />
+	<property name="MQSI_JARPATH" value="/opt/IBM/mqsi/brokertoolkit/Broker_C/EAsmbl_image/iib-10.0.0.1/server/classes" />
+	<!--<property name="toolkit.home" value="C:\Program Files\IBM\IIB\10.0.0.3\tools" />
+	<property name="mqsioverridelocation" value="C:\Program Files\IBM\IIB\10.0.0.3\server\bin" />
+	<property name="MQSI_JARPATH" value="C:\Program Files\IBM\IIB\10.0.0.3\server\classes" />-->
+	<!--
+	################################################################################
+			LIBRARY DEFINITIONS
+	################################################################################
+	-->
+	<!-- Reference ANT Contrib Tasks Library -->
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+		<classpath>
+			<pathelement location="C:\Jithesh\sgbworkspace\SGBBuild\SBGBuild\iib-scripts\iib-antscript\applic_prod\lib\ant-contrib-1.0b3.jar" />
+			</classpath>
+	</taskdef>
+
+	<taskdef name="for" classname="net.sf.antcontrib.logic.ForTask" onerror="ignore">
+		<classpath>
+			<pathelement location="C:\Jithesh\sgbworkspace\SGBBuild\SBGBuild\iib-scripts\iib-antscript\applic_prod\lib\ant-contrib-1.0b3.jar" />
+		</classpath>
+	</taskdef>
+	
+	<!-- 
+		################################################################################
+			MACRO DEFINITIONS
+		################################################################################
+	-->
+	<!-- Create Baseline Identification File -->
+	<!--<macrodef name="createBaselineIdFile">
+		<sequential>		
+			<echo message="Release Initiative: ${release.initiative}, 
+				Release Build Number: ${release.build.number},
+				Release Label: ${release.initiative}_${release.build.number}" file="${release.workspace.dir}/baselines_WMB_${release.initiative}_${release.build.number}.txt" append="false" />
+		</sequential>
+	</macrodef>-->
+	
+	<macrodef name="doesDirectoryExistsTest">
+		<attribute name="target.dir" />
+		<attribute name="source.dir" />
+		<attribute name="label.used" />
+		<sequential>
+			<echo message="Checking to see if @{target.dir} exists" />
+			<available file="@{target.dir}" type="dir" property="file.exists" />
+			<if>
+				<equals arg1="${file.exists}" arg2="true" />
+				<then>
+					<echo message="error: @{target.dir} already exists and is being overwritten by @{label.used}" level="error" />
+				</then>
+			</if>
+		</sequential>
+	</macrodef>
+
+	<!-- Create xml properties File and add a single xml line -->
+	<macrodef name="createXmlSingleLine">
+		<attribute name="target.dir" />
+		<attribute name="file.name" />
+		<attribute name="tag.name" />
+		<attribute name="line.data" />
+		<sequential>
+			<!-- Create Temp File -->
+			<echo message="&lt;@{tag.name}&gt;@{line.data}&lt;/@{tag.name}&gt;${line.separator}" file="@{target.dir}/@{file.name}" append="true" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create xml properties File and add start tag and data -->
+	<macrodef name="createXmlStartTag">
+		<attribute name="target.dir" />
+		<attribute name="file.name" />
+		<attribute name="tag.name" />
+		<sequential>
+			<!-- Create Temp File -->
+<echo message  = "Second Echo" />
+
+			<echo message="&lt;@{tag.name}&gt;" file="@{target.dir}/@{file.name}" append="true" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create xml properties File and add start tag and data -->
+	<macrodef name="createXmlData">
+		<attribute name="target.dir" />
+		<attribute name="file.name" />
+		<attribute name="line.data" />
+		<sequential>
+			<!-- Create Temp File -->
+			<echo message="@{line.data}" file="@{target.dir}/@{file.name}" append="true" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create xml properties File and add end tag -->
+	<macrodef name="createXmlEndTag">
+		<attribute name="target.dir" />
+		<attribute name="file.name" />
+		<attribute name="tag.name" />
+		<sequential>
+			<!-- Create Temp File -->
+			<echo message="&lt;/@{tag.name}&gt;" file="@{target.dir}/@{file.name}" append="true" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create xml properties File line feed -->
+	<macrodef name="createXmlLineSeparator">
+		<attribute name="target.dir" />
+		<attribute name="file.name" />
+		<sequential>
+			<!-- Create Temp File -->
+			<echo message="${line.separator}" file="@{target.dir}/@{file.name}" append="true" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create Deployment Properties File -->
+	<macrodef name="createDeploymentPropertiesFile">
+		<attribute name="line.value" />
+		<attribute name="target.dir" />
+		<sequential>
+			<!-- Create Temp File -->
+			<echo message="@{line.value}${line.separator}" file="@{target.dir}/deployment.properties" append="true" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create Deployment Properties File -->
+	<macrodef name="writeBuildInfoFile">
+		<attribute name="service.identifier" />
+		<attribute name="deployment.properties" />
+		<sequential>
+			<!-- Create buildInfo.xml file -->
+			<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ServiceDeploymentTarget" />
+			<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ServiceName" />
+			<createXmlData target.dir="${release.dir}" file.name="buildInfo.xml" line.data="@{service.identifier}" />
+			<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ServiceName" />
+			<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="EGName" />
+			<createXmlData target.dir="${release.dir}" file.name="buildInfo.xml" line.data="@{deployment.properties}" />
+			<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="EGName" />
+			<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ServiceDeploymentTarget" />
+			<createXmlLineSeparator target.dir="${release.dir}" file.name="buildInfo.xml" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create Current Build Timestamp Temp File -->
+	<macrodef name="storeBuildTimestamp">
+		<sequential>
+			<!-- Determine Timestamp for Build -->
+			<tstamp>
+				<format property="build.datetime" pattern="yyyyMMddHHmm" />
+			</tstamp>
+
+			<!-- Create Temp File -->
+			<echo message="build.datetime=${build.datetime}" file="${release.dir}/~buildDateTime.tmp" append="false" />
+		</sequential>
+	</macrodef>
+
+	<!-- Delete Current Build Timestamp Temp File -->
+	<macrodef name="deleteBuildTimestampFile">
+		<sequential>
+			<!-- Delete the Timestamp Temp File -->
+			<delete file="${release.dir}/~buildDateTime.tmp" verbose="true" />
+		</sequential>
+	</macrodef>
+
+	<!-- Retrieve Current Build Timestamp Value **NOT USED** -->
+	<macrodef name="retrieveBuildTimestamp">
+		<sequential>
+			<!-- Load Build Datetime Property -->
+			<property file="${release.dir}/~buildDateTime.tmp" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create Release Temporary Workspace -->
+	<macrodef name="createReleaseTmpWorkspace">
+		<attribute name="workspace.dir" />
+
+		<sequential>
+			<echo message="Creating Release Temporary Workspace..." />
+			<!-- Remove any existing workspace directory -->
+			<delete dir="@{workspace.dir}" includeemptydirs="true" />
+			<!-- Create new temporary workspace directory -->
+			<mkdir dir="@{workspace.dir}" />
+		</sequential>
+	</macrodef>
+
+	<!-- Clean Release Temporary Workspace -->
+	<macrodef name="cleanReleaseTmpWorkspace">
+		<attribute name="workspace.dir" />
+		<sequential>
+			<echo message="Cleaning Release Temporary Workspace..." />
+			<!-- Remove any existing workspace directory -->
+			<delete dir="@{workspace.dir}" />
+		</sequential>
+	</macrodef>
+
+	<!-- Create Release Staging Area -->
+	<macrodef name="createReleaseStagingArea">
+		<attribute name="staging.dir" />
+		<sequential>
+			<echo message="Creating Release Staging Area..." />
+			<!-- Remove any existing staging directory -->
+			<delete dir="@{staging.dir}" includeemptydirs="true" />
+			<!-- Create new temporary staging directory -->
+			<mkdir dir="@{staging.dir}" />
+			<!-- Create Staging Directories Environment  -->
+			<mkdir dir="@{staging.dir}/${release.environment}" />
+		</sequential>
+	</macrodef>
+
+	<!-- Clean Release Staging Area -->
+	<macrodef name="cleanReleaseStagingArea">
+		<attribute name="staging.dir" />
+		<sequential>
+			<echo message="Cleaning Release Staging Area..." />
+			<!-- Remove any existing staging directory -->
+			<delete dir="@{staging.dir}" includeemptydirs="true" />
+		</sequential>
+	</macrodef>
+	
+	<!-- Utility Macro to Dynamically Specify and Determine Component Paths -->
+	<macrodef name="dynamicallyDetermineComponentPath">
+		<attribute name="name" />
+		<attribute name="fromBase" />
+		<attribute name="fromSpecialisation" />
+		<sequential>
+			<property name="@{name}" value="${@{fromBase}.@{fromSpecialisation}}" />
+			<echo message="@{name} ${@{fromBase}.@{fromSpecialisation}}" />
+		</sequential>
+	</macrodef>
+
+	<!-- Build Release -->
+	<macrodef name="buildRelease">
+		<attribute name="release.build.services" />
+		<attribute name="release.workspace.dir" />
+		<attribute name="release.staging.dir" />
+		<sequential>
+			<!-- Iterate over Service List and Build Services -->
+			<property name="rls.workspace.dir" value="@{release.workspace.dir}" />
+			<property name="rls.staging.dir" value="@{release.staging.dir}" />
+			<foreach list="@{release.build.services}" delimiter=" " target="buildService" param="service" inheritall="true" />
+		</sequential>
+	</macrodef>
+
+	<!--Copy Selected project Folders-->
+	<target name="CopyFolders">
+		<echo message="Copy ${ServiceProject} project" />
+		<mkdir dir="${release.workspace.dir}/${ServiceProject}" />
+		<copy todir="${release.workspace.dir}/${ServiceProject}">
+			<fileset dir="${release.source.dir}/ESB2WMB/${ServiceProject}">
+				<exclude name="**/.copyarea" />
+			</fileset>
+		</copy>
+	        <delete dir="${release.workspace.dir}/${ServiceProject}/gn/esb2/service">
+       	 	<exclude name="**/*${release.build.services}*"/>	
+			<exclude name="**/*SUB_SVC0385v1*"/>
+	        </delete>	
+            <delete dir="${release.workspace.dir}/${ServiceProject}/gn/esb2/foundation/master">
+            	<exclude name="**/*PreloadRefData*"/>	
+            </delete>
+            <delete dir="${release.workspace.dir}/${ServiceProject}/gn/esb2/foundation/subflow">
+		<include name="**/*SFL_XFORM*"/>
+            </delete>
+	</target>	
+	
+	<!-- Build Service -->
+	<target name="buildService">
+		<echo message="Building the ${service} service..." />
+		<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ServiceCompile" />
+		<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="Name" />
+		<createXmlData target.dir="${release.dir}" file.name="buildInfo.xml" line.data="${service}" />
+		<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="Name" />
+
+		<tstamp>
+			<format property="service.starttime" pattern="dd-MM-yyyy HH:mm:ss" />
+		</tstamp>
+
+		<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="StartTime" />
+		<createXmlData target.dir="${release.dir}" file.name="buildInfo.xml" line.data="${service.starttime}" />
+		<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="StartTime" />
+
+		<delete dir="${rls.workspace.dir}/.metadata" includeemptydirs="true" />
+				
+		<!-- Build Project -->
+		<ant antfile="build.xml" dir="${rls.workspace.dir}/COM_Foundation/Build" target="Build${service}.bar" inheritall="true" />
+
+		<tstamp>
+			<format property="service.endtime" pattern="dd-MM-yyyy HH:mm:ss" />
+		</tstamp>
+
+		<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="EndTime" />
+		<createXmlData target.dir="${release.dir}" file.name="buildInfo.xml" line.data="${service.endtime}" />
+		<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="EndTime" />
+
+		<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ServiceCompile" />
+		<createXmlLineSeparator target.dir="${release.dir}" file.name="buildInfo.xml" />
+
+		<!-- Get the Execution Group value from the deployment.properties file -->
+		<dynamicallyDetermineComponentPath name="deployment.properties.value" frombase="deployment.properties" fromspecialisation="${service}" />
+
+		<!-- Create and write to the deployment.properties file for the build -->
+		<createDeploymentPropertiesFile line.value="${service}.${release.environment}=${deployment.properties.value}" target.dir="${rls.workspace.dir}" />
+		<writeBuildInfoFile service.identifier="${service}" deployment.properties="${deployment.properties.value}" />
+
+		<!-- Copy BAR Override Property Files to Staging Area for BAR Configuration -->
+		<!--Commenting as we dont need to override bar in SBG
+		<if>
+			<available file="${rls.workspace.dir}/COM_Foundation/Build" type="dir" />
+			<then>
+				<copy todir="${rls.staging.dir}">
+					<fileset dir="${rls.workspace.dir}/COM_Foundation/Build">
+						<patternset includes="*.properties" />
+					</fileset>
+				</copy>
+			</then>
+		</if>-->
+	</target>
+	<!-- Override Service BAR Files  Added on 19 Dec 2017-->
+	<macrodef name="overrideServiceBarFiles">
+		<attribute name="release.service.list" />
+		<attribute name="release.staging.dir" />
+		<sequential>
+			<!-- Add required release details to override file.  -->
+			<echo message="release.initiative=${release.initiative}${line.separator}
+release.build.number=${release.build.number}${line.separator}
+release.build.label=${release.initiative}_${release.build.number}${line.separator}" file="@{release.staging.dir}/overrides.txt" append="false" />
+			<!-- Iterate over Service List and Override Service Properties -->
+			<property name="rls.staging.dir" value="@{release.staging.dir}" />
+			<foreach list="@{release.service.list}" delimiter=" " target="overrideServiceProperties" param="service" inheritall="true" />
+		</sequential>
+	</macrodef>
+
+	<!-- Apply BAR Override Added on 19 Dec 2017-->
+	<macrodef name="mqsiapplybaroverride">
+		<attribute name="service.name" />
+		<attribute name="service.bar.name" />
+		<attribute name="overriden.bar.name" />
+		<attribute name="override.properties" />
+		<attribute name="release.staging.dir" />
+		<attribute name="target.environment" />
+		<sequential>
+			<echo message="Configuring @{service.name} for @{target.environment}" />
+			<echo message="mqsiapplybaroverride command: " />
+			 <echo message ="Service Bar Name @{release.staging.dir}/@{service.bar.name}" />
+			 <echo message ="Override file ${release.workspace.dir}/COM_Foundation/Build/@{override.properties}" />
+			 <echo message ="Application Name @{service.name}" />
+			 <echo message ="Output ${rls.workspace.dir}/@{target.environment}/@{overriden.bar.name}" />
+			<echo message="mqsiapplybaroverride -b @{release.staging.dir}/@{service.bar.name} -p ${release.workspace.dir}/COM_Foundation/Build/@{override.properties} -k @{service}-o @{rls.workspace.dir}/@{target.environment}/@{overriden.bar.name}" />			 
+				<exec executable="${toolkit.home}/../server/bin/mqsiapplybaroverride.bat" spawn="false" failonerror="true">
+			        <arg value="-b" />
+					<arg value="@{release.staging.dir}/@{service.bar.name}" />
+					<arg value="-p"/>
+					<arg value="${release.workspace.dir}/COM_Foundation/Build/@{override.properties}" />
+					<arg value="-k"/>
+					<arg value="${service}"/>
+					<arg value="-o"/>
+					<arg value="${rls.workspace.dir}/@{target.environment}/@{overriden.bar.name}"/>
+ 				</exec>
+
+	<!-- Concat the override files with additional details  -->
+			<echo message="ServiceName=@{service.bar.name} ${line.separator}Environment=@{target.environment} ${line.separator}" file="@{release.staging.dir}/overrides.txt" append="true" />
+			<concat destfile="@{release.staging.dir}/overrides.txt" append="true" fixlastline="true">
+				<filelist dir="@{release.staging.dir}" files="@{override.properties}" />
+			</concat>
+			<echo message="Completed overriding Broker Archive file - @{overriden.bar.name} " />
+		</sequential>
+	</macrodef>
+	
+	<!-- Copy selected file(s) into environment directory -->
+	<macrodef name="copyFilesFromDirToDir">
+		<attribute name="source.dir" />
+		<attribute name="destination.dir" />
+		<attribute name="pattern.set" />
+		<sequential>
+			<echo message="copying from --->MaybeBar @{source.dir} to @{destination.dir}/XXX using patternset @{pattern.set}" />
+
+			<copy todir="@{destination.dir}/${release.environment}">
+				<fileset dir="@{source.dir}">
+					<patternset includes="@{pattern.set}" />
+				</fileset>
+			</copy>
+		</sequential>
+	</macrodef>
+
+	<!-- Copy the files for MQSI -->
+	<!-- Copy files at all times as deployment process removes previous version of files on broker -->
+	<macrodef name="copyFiles">
+		<attribute name="release.staging.dir" />
+		<sequential>
+			<echo message="About to copy Files" />
+			<!-- Copy product catalogue files -->
+			<copy todir="@{release.staging.dir}/${release.environment}/ProductCatalogue">
+				<fileset dir="${release.workspace.dir}/COM_Foundation/ProductCatalogue/" />
+			</copy>
+			<!-- Copy Retry Mediation files -->
+			<copy todir="@{release.staging.dir}/${release.environment}/StatusHandlers">
+				<fileset dir="${release.workspace.dir}/COM_Foundation/StatusHandlers/" />
+			</copy>
+			<!-- Copy Fast Fail files.  'to' dir has to be lower case -->
+			<copy todir="@{release.staging.dir}/${release.environment}/fastfail">
+				<fileset dir="${release.workspace.dir}/COM_Foundation/FastFail/" />
+			</copy>
+			<!-- Copy ReferenceData -->
+			<copy todir="@{release.staging.dir}/${release.environment}/ReferenceData">
+				<fileset dir="${release.workspace.dir}/COM_Foundation/ReferenceData/" />
+			</copy>
+			<!-- Copy ErrorFiles -->
+			<copy todir="@{release.staging.dir}/${release.environment}/ErrorFiles">
+				<fileset dir="${release.workspace.dir}/COM_Foundation/ErrorFiles/" />
+			</copy>
+			<!-- Copy product CPC -->
+			<copy todir="@{release.staging.dir}/${release.environment}/CPC">
+				<fileset dir="${release.workspace.dir}/COM_Foundation/CPC/" />
+			</copy>
+			<!-- Copy Configuration File -->
+			<copy todir="@{release.staging.dir}/${release.environment}/Configuration">
+				<fileset dir="${release.workspace.dir}/COM_Foundation/Configuration/" />
+			</copy>
+		</sequential>
+	</macrodef>
+
+	<!-- Move Distribution Packages for Consumption by Lodgement -->
+	<macrodef name="moveDistributionPackages">
+		<attribute name="release.staging.dir" />
+		<attribute name="release.dir" />
+		<sequential>
+			<echo message="Move bar package from staging dir to workspace" />
+			<echo message="From *** ==> @{release.staging.dir}/${release.environment}" />
+			<echo message="To==> @{release.dir}/${release.environment}" />
+			<!--<move file="@{release.staging.dir}/${release.environment}" tofile="@{release.dir}/${release.environment}" />-->
+			<move file="@{release.staging.dir}" tofile="@{release.dir}/${release.environment}" />
+			<!--<move file="C:\BUILD\${release.environment}" tofile="@{release.dir}/${release.environment}" />-->
+		</sequential>
+	</macrodef>
+	
+	<!-- Set and Store Build Timestamp -->
+	<target name="set.build.timestamp">
+		<storeBuildTimestamp />
+	</target>
+
+	<!-- Initialize Release Directory Paths -->
+	<target name="init">
+		<!-- Build Project -->
+		<!-- Clean up place where incoming tar is unpacked -->
+		<cleanReleaseTmpWorkspace workspace.dir="${release.source.dir}" />
+		<mkdir dir="${release.source.dir}" />
+		<!-- Remove generic error.log (this gets recreated at the end of build.  Used by Control-M to verify success) -->
+		<delete file="${release.un_log.dir}/error.log" />
+
+		<!-- Copy files from exec to workspace -->
+		<copy todir="${release.source.dir}">
+			<fileset dir="${release.broker_source}" />
+		</copy>
+
+		<copy todir="${release.source.dir}/Common/COM_Foundation">
+			<fileset dir="${release.broker_overrides}" />
+		</copy>
+		<!-- Code added to copy content from Common Lib -->
+		<!--<mkdir dir="${release.source.dir}/CommSharedLib" />-->
+		<copy todir="${release.source.dir}">
+			<fileset dir="${release.broker_commonlib}" />
+		</copy>
+		<!-- release.properties file from ClearCase -->
+		<property file="${release.broker_build}/iib-scripts/Build/release.properties" />
+
+		<!-- Configure Directory Names -->
+		<property name="release.workspace.dir.name" value="${build.datetime}-${release.environment}" />
+		<property name="release.staging.dir.name" value="REL_Staging" />
+		<property name="release.deployment.properties.src.dir.name" value="d" />
+		<property name="release.deployment.properties.dst.dir.name" value="REL_Deployment" />
+
+		<!-- Configure Directory Paths -->
+		<property name="release.workspace.dir" value="${releasepackages.dir.root}/${release.workspace.dir.name}" />
+		<property name="release.staging.dir" value="${release.workspace.dir}/${release.staging.dir.name}" />
+		<property name="release.deployment.properties.src.dir" value="${release.dir}/${release.deployment.properties.src.dir.name}" />
+		<property name="release.deployment.properties.dst.dir" value="${release.workspace.dir}/${release.deployment.properties.dst.dir.name}" />
+		<echo message="*** release.workspace.dir.name => ${release.workspace.dir.name}" />
+		<echo message="*** release.workspace.dir => ${release.workspace.dir}" />
+		<echo message="*** release.staging.dir => ${release.staging.dir}" />
+		<echo message="*** release.deployment.properties.dst.dir => ${release.deployment.properties.dst.dir}" />		
+	</target>
+	<!-- Override Service Properties Added for SBG Overrides on 19 Dec2017 -->
+	<target name="overrideServiceProperties">
+		<dynamicallyDetermineComponentPath name="service.identifier.name" frombase="service.identifier" fromspecialisation="${service}" />
+		<mqsiapplybaroverride service.name="${service}" service.bar.name="${service}.${release.environment}.bar" overriden.bar.name="${service}.${release.environment}.bar" override.properties="overrides.${release.environment}.properties" release.staging.dir="${rls.staging.dir}" target.environment="${release.environment}" />
+
+		<!-- Cleanup Override Source Information -->
+		<delete>
+			<fileset dir="${rls.staging.dir}">
+				<include name="${service}*.*" />
+			</fileset>
+		</delete>
+	</target>
+	<!-- Clean Release  - Directory Structure -->
+	<target name="clean.release" depends="init">
+		<!-- Clean Workspace -->
+		<cleanReleaseTmpWorkspace workspace.dir="${release.workspace.dir}" />
+	</target>
+	
+	<target name="check.esb.build.parameter">
+		<!-- Check that a file contains $ESBBuild -->
+		<loadfile srcfile="${file.name}" property="text">
+			<filterchain>
+				<linecontains>
+					<contains value="$ESBBuild" />
+				</linecontains>
+			</filterchain>
+		</loadfile>
+		<if>
+			<equals arg1="${text}" arg2="$${text}" />
+			<then>
+				<echo message="error: ${file.name} does not have $ESBBuild." level="error" />
+			</then>
+		</if>
+	</target>
+
+	<!-- Build Release -->
+	<target name="build.release" depends="set.build.timestamp, init, clean.release">
+		<!-- Start Logger -->
+		<record action="start" name="${release.un_log.dir}/build_package.log" loglevel="info" />
+		<record action="start" name="${release.un_log.dir}/error.log" loglevel="error" />
+
+		<!-- Determine and Store Build Start Time -->
+		<tstamp>
+			<format property="build.starttime" pattern="dd-MM-yyyy HH:mm:ss" />
+		</tstamp>
+
+		<!-- Delete the buildInfo.xml file if it exists (may be left there if there is a build failure -->
+		<available file="${release.dir}/buildInfo.xml"  property="buildInfo.file.found"/>
+		<if>
+			<equals arg1="${buildInfo.file.found}" arg2="true" />
+			<then>
+				<delete file="${release.dir}/buildInfo.xml" verbose="true" />
+			</then>
+		</if>
+		<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="BuildInfo" />
+		<createXmlLineSeparator target.dir="${release.dir}" file.name="buildInfo.xml" />
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="StartTime" line.data="${build.starttime}" />
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="AntVersion" line.data="${ant.version}" />
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="BuildTargetDir" line.data="${release.workspace.dir.name}" />
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="MachineName" line.data="${env.COMPUTERNAME}" />
+		<createXmlStartTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="BrokerToolkit" />
+		<createXmlLineSeparator target.dir="${release.dir}" file.name="buildInfo.xml" />
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="Name" line.data="${toolkit.name}" />
+		<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="BrokerToolkit" />
+		<createXmlLineSeparator target.dir="${release.dir}" file.name="buildInfo.xml" />
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ReleaseInitiative" line.data="${release.initiative}" />
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ReleaseBuildNumber" line.data="${release.build.number}" />
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="ReleaseLabel" line.data="${release.initiative}_${release.build.number}" />
+
+		<!-- Print Banner - Build Start -->
+		<echo message="======================================================================" />
+		<echo message="*** Build: ${release.initiative}_${release.build.number}" />
+		<echo message="*** Build Start Time: ${build.starttime}" />
+		<echo message="*** Ant Version: ${ant.version}" />
+		<echo message="*** Build Computer: ${env.COMPUTERNAME}" />
+		<echo message="======================================================================" />
+
+		<!-- Create Temporary Workspace and Staging Area for Release Build -->
+		<createReleaseStagingArea staging.dir="${release.workspace.dir}" />
+		<!-- <createVersionCtlFilesInEachEnvironment staging.dir="${release.workspace.dir}"/> -->
+
+		<echo message="*** release.staging.dir ===> ${release.staging.dir}" />
+		<!-- Create REL_Staging directoried here as they are needed later -->
+		<createReleaseStagingArea staging.dir="${release.staging.dir}" />
+
+		<!-- Creates Baseline Identifier File for Release Build - What Baseline Labels are Included -->
+		<!--<createBaselineIdFile />-->
+		
+		<!-- Copy files from exec to workspace -->
+		<copy todir="${release.workspace.dir}">
+			<fileset dir="${release.source.dir}/Common" />			
+		</copy>
+
+		<echo message = "BARNAME : ${release.build.services}"/>
+		
+		<xslt style="${release.build.basedir}/lib/ExtractManifestTask.xslt" force="true" in="${release.broker_overrides}/Build/SGBManifest.xml" out="${release.exec.dir}/folderNames.properties">
+			<param name="BarName" expression="${release.build.services}"/>
+		</xslt>
+		
+		<property file="${release.exec.dir}/folderNames.properties" />
+		<!-- Logic: Read the folderNames.properties and copy the folders mentioned against Application, SharedLib and StaticLib in workspace folder -->		
+		
+		<for list="${Application}" param="AppName" delimiter=", " keepgoing="true">			
+			<sequential>
+				<echo message = "AppName++++++++++++++++ : @{AppName}"/>
+				<mkdir dir="${release.workspace.dir}/${ApplicationName}" />
+				<copy todir="${release.workspace.dir}/${ApplicationName}">
+					<fileset dir="${release.source.dir}/Applications/@{AppName}"/>
+				</copy>			
+			</sequential>
+		</for>
+		<for list="${SharedLib}" param="SharedLibrary" delimiter=", " keepgoing="true">			
+			<sequential>
+				<echo message = "SharedLibrary******* : @{SharedLibrary}"/>
+				<mkdir dir="${release.workspace.dir}/@{SharedLibrary}" />
+				<copy todir="${release.workspace.dir}/@{SharedLibrary}">
+					<fileset dir="${release.source.dir}/CommSharedLib/@{SharedLibrary}"/>
+				</copy>
+			</sequential>
+		</for>
+		<for list="${StaticLib}" param="StaticLibrary" delimiter=", " keepgoing="true">			
+			<sequential>
+				<echo message = "StaticLibrary******* : @{StaticLibrary}"/>
+				<mkdir dir="${release.workspace.dir}/@{StaticLibrary}" />
+				<copy todir="${release.workspace.dir}/@{StaticLibrary}">
+					<fileset dir="${release.source.dir}/CommStaticLib/@{StaticLibrary}"/>
+				</copy>
+			</sequential>
+		</for>
+		
+		<!--<for list="${masterProjectName}" param="ServiceProject" delimiter="," keepgoing="true">
+			<sequential>
+				<mkdir dir="${release.workspace.dir}/@{ServiceProject}" />
+				<for list="${flowName}" param="flows" delimiter="," keepgoing="true">
+					<sequential>
+						<copy todir="${release.workspace.dir}/@{ServiceProject}">
+							<fileset dir="${release.source.dir}/ESB2WMB/@{ServiceProject}/">
+								<exclude name="**/*.copyarea*" />
+								<include name="**/*.project*"/>
+								<include name="**/*@{flows}*"/>
+								<include name="gn/esb2/foundation/common/v01/*"/>
+							</fileset>
+						</copy>		
+					</sequential>	
+				</for>
+			  </sequential>
+		</for>
+		
+		<for list="${msgSetProject}" param="messageSet" delimiter="," keepgoing="true">
+			<sequential>
+				<mkdir dir="${release.workspace.dir}/@{messageSet}" />
+				<copy todir="${release.workspace.dir}/@{messageSet}">
+					<fileset dir="${release.source.dir}/ESB2WMB/@{messageSet}">
+						<exclude name="**/*.copyarea*" />
+					</fileset>
+				</copy>		
+			</sequential>
+		</for>
+			
+		<for list="${otherProject}" param="otherProject" delimiter="," keepgoing="true">
+			<sequential>
+				<mkdir dir="${release.workspace.dir}/@{otherProject}" />
+				<copy todir="${release.workspace.dir}/@{otherProject}">
+					<fileset dir="${release.source.dir}/ESB2WMB/@{otherProject}">
+						<exclude name="**/*.copyarea*" />
+					</fileset>
+				</copy>		
+			</sequential>
+		</for>-->
+
+		<!-- check that all of the xml's and xsl's have #ESBBuild parameter --> 
+		<foreach target="check.esb.build.parameter" param="file.name">
+			<path>
+				<fileset dir="${release.workspace.dir}/COM_Foundation" includes="XSL/*.xsl ErrorMaps/**/*.xml" />
+			</path>
+		</foreach>
+		<echo message="before buildRelease" />
+		
+		<!-- Build Services -->
+		<buildRelease release.build.services="${release.build.services}" release.workspace.dir="${release.workspace.dir}" release.staging.dir="${release.staging.dir}" />
+		
+		<echo message="after buildRelease" />
+		<!-- Copy WMB related files -->
+		<!--copyFiles release.staging.dir="${release.workspace.dir}" /-->
+
+		<!-- Create Release Packages - Override Properties. unCommenting for SGB IIB on 19 Dec 2017-->
+		<echo message ="release.build.services ${release.build.services}"/>
+		<echo message ="release.staging.dir ${release.staging.dir}"/>
+		<overrideServiceBarFiles release.service.list="${release.build.services}" release.staging.dir="${release.staging.dir}" />
+		<echo message = "testing"/>
+		<!-- Make sure the text files that will go to unix are in the correct format -->
+		<!--fixcrlf srcdir="${release.workspace.dir}" includes="deployment.properties" eol="lf" eof="remove" /-->
+
+		<!-- Copy created deployment.properties file to each of the environments -->
+		<copyFilesFromDirToDir source.dir="${release.workspace.dir}" destination.dir="${release.workspace.dir}" pattern.set="deployment.properties" />
+
+		<!-- Make sure the text files that will go to unix are in the correct format -->
+		<!--fixcrlf srcdir="${basedir}" includes="*.sh" eol="lf" eof="remove" /-->
+
+		<!-- Copy files from build source dir to each environment. -->
+		<copyFilesFromDirToDir source.dir="${release.broker_build}/iib-scripts/Build" destination.dir="${release.workspace.dir}" pattern.set="*.*" />
+
+		<!-- Move Distribution Packages to the Release Packages Project -->
+		<moveDistributionPackages release.staging.dir="${release.staging.dir}" release.dir="${release.workspace.dir}" />
+
+		<!-- Move Baseline.txt file to the same location as the released files -->
+		<!--<move file="${release.workspace.dir}/baselines_WMB_${release.initiative}_${release.build.number}.txt" tofile="${release.workspace.dir}/baselines_WMB_${release.initiative}_${release.build.number}.txt" />-->
+
+		<!-- Determine and Store Build End Time -->
+		<tstamp>
+			<format property="build.endtime" pattern="dd-MM-yyyy HH:mm:ss" />
+		</tstamp>
+
+		<createXmlSingleLine target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="StopTime" line.data="${build.endtime}" />
+		<createXmlEndTag target.dir="${release.dir}" file.name="buildInfo.xml" tag.name="BuildInfo" />
+		
+		<!-- Print Banner - Build End -->
+		<echo message="======================================================================" />
+		<echo message="*** Build End Time: ${build.endtime}" />
+		<echo message="======================================================================" />
+
+		<!-- Stop Logger so we can copy the file into the release directory -->
+		<echo message="Stopping the logger prior to moving the file." />
+		<record action="stop" name="${release.un_log.dir}/build_package.log" />
+		<record action="stop" name="${release.un_log.dir}/error.log" /> 
+		
+		<!--touch file="${release.workspace.dir}/${release.environment}/version.ctl"/-->
+		<echo file="${release.workspace.dir}/${release.environment}/version.ctl" append="true">GN03_SV_V01_WMB_V000.1_160831
+		# Activity: deliver.GN03_SV_V01_WMB_16E3_DEV_V2.20160815.144517@GN03_SV_V01_WMB_16E4_DEV_V1
+</echo>
+		<echo message="WORKSPACE ${release.workspace.dir} ${release.environment}" />
+
+		<!-- create outgoing tar with executable permissions -->
+		<tar destfile="${release.working.dir}/${release.build.services}.tar">
+			<tarfileset dir="${release.workspace.dir}/${release.environment}" filemode="755" />
+		</tar>
+
+		<delete dir="${release.workspace.dir}.metadata" includeemptydirs="true" />
+
+		<delete includeemptydirs="true" verbose="false">
+			<fileset dir="${release.workspace.dir}/.metadata" defaultexcludes="false">
+			</fileset>
+		</delete>
+	</target>
+
+</project>
